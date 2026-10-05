@@ -1,36 +1,62 @@
 package com.example.tenantmanagementsystem2
 
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.example.tenantmanagementsystem2.databinding.ActivityMainBinding
 
 class MainActivity : AppCompatActivity() {
-
-    // "binding" gives us access to every view in activity_main.xml.
-    // lateinit = we promise to give it a value before we use it (in onCreate).
     private lateinit var binding: ActivityMainBinding
+    private var lastTenant: Tenant? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        // Connect this Activity to activity_main.xml using binding
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // This code runs when the SAVE button is tapped
-        binding.saveButton.setOnClickListener {
+        val email = intent.getStringExtra("EMAIL")
+        if (email != null) {
+            Toast.makeText(this, "Logged in as $email", Toast.LENGTH_SHORT).show()
+        }
 
-            // 1. Read what the user typed
+        binding.saveButton.setOnClickListener {
             val name = binding.tenantNameEditText.text.toString()
             val phone = binding.phoneEditText.text.toString()
             val rent = binding.rentEditText.text.toString()
 
-            // 2. Put the details into a Tenant object
-            val tenant = Tenant(name, phone, rent)
+            var valid = true
+            if (name.isEmpty()) { binding.tenantNameEditText.error = "Required"; valid = false }
+            if (phone.isEmpty()) { binding.phoneEditText.error = "Required"; valid = false }
+            if (rent.isEmpty()) { binding.rentEditText.error = "Required"; valid = false }
+            if (!valid) return@setOnClickListener
 
-            // 3. Give the Tenant to the layout.
-            //    The XML then shows it using @{tenant.summary()}
+            val tenant = Tenant(name, phone, rent)
             binding.tenant = tenant
+            lastTenant = tenant
+        }
+
+        binding.callButton.setOnClickListener {
+            val tenant = lastTenant
+            if (tenant == null) {
+                Toast.makeText(this, "Save a tenant first", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+            val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:${tenant.phone}"))
+            startActivity(intent)
+        }
+
+        binding.shareButton.setOnClickListener {
+            val tenant = lastTenant
+            if (tenant == null) {
+                Toast.makeText(this, "Save a tenant first", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+            val intent = Intent(Intent.ACTION_SEND)
+            intent.type = "text/plain"
+            intent.putExtra(Intent.EXTRA_TEXT, tenant.summary())
+            startActivity(Intent.createChooser(intent, "Share tenant"))
         }
     }
 }
